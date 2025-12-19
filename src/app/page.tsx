@@ -13,6 +13,7 @@ import { redirect } from 'next/navigation'
 
 export default async function Home() { 
 
+  //redirect loggedin user to dashboard
   const user = await currentUser();
   if (user) redirect("/dashboard");
 
