@@ -1,6 +1,6 @@
 "use client"
 
-import { syncUser } from "@/lib/actions/user";
+import { syncUser } from "@/lib/actions/users";
 import { useUser } from "@clerk/nextjs";
 import { useEffect } from "react";
 
