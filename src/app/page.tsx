@@ -14,9 +14,11 @@ import { redirect } from 'next/navigation'
 export default async function Home() { 
 
   //redirect loggedin user to dashboard
-  const user = await currentUser();
+    const user = await currentUser();
+  // redirect auth user to dashboard
   if (user) redirect("/dashboard");
 
+  
   return (
     <div className='min-h-screen bg-background'>
 <Header/>
