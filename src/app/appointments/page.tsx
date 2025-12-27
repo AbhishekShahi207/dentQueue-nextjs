@@ -1,5 +1,6 @@
 "use client";
 
+import { AppointmentConfirmationModal } from "@/components/appointments/AppointmentConfirmationModal";
 import BookingConfirmationStep from "@/components/appointments/BookingConfirmationStep";
 import DoctorSelectionStep from "@/components/appointments/DoctorSelectionStep";
 import ProgressSteps from "@/components/appointments/ProgressSteps";
@@ -36,39 +37,62 @@ const {data:userAppointments=[]}=  useUserAppointments()
     setSelectedType("")
   };
 
-  const handleBookAppointment = async () => {
-    if(!selectedDate || !selectedDentistId || !selectedTime){
-      toast.error("Please fill in all required fields")
+ const handleBookAppointment = async () => {
+    if (!selectedDentistId || !selectedDate || !selectedTime) {
+      toast.error("Please fill in all required fields");
       return;
     }
-    const appointmentType= APPOINTMENT_TYPES.find((t)=> t.id === selectedType)
-    bookAppointmentMutation.mutate({
-      doctorId:selectedDentistId,
-      date:selectedDate,
-      time:selectedTime,
-      reason:appointmentType?.name
-    },
-  {
-    onSuccess:(appointment)=>{
-      //store the appointent to show in modal
-      setBookedAppointment(appointment)
 
+    const appointmentType = APPOINTMENT_TYPES.find((t) => t.id === selectedType);
 
-      //show the success modal
-      setShowConfirmationModal(true)
+    bookAppointmentMutation.mutate(
+      {
+        doctorId: selectedDentistId,
+        date: selectedDate,
+        time: selectedTime,
+        reason: appointmentType?.name,
+      },
+      {
+        onSuccess: async (appointment) => {
+          // store the appointment details to show in the modal
+          setBookedAppointment(appointment);
 
+          try {
+            const emailResponse = await fetch("/api/send-appointment-email", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                userEmail: appointment.patientEmail,
+                doctorName: appointment.doctorName,
+                appointmentDate: format(new Date(appointment.date), "EEEE, MMMM d, yyyy"),
+                appointmentTime: appointment.time,
+                appointmentType: appointmentType?.name,
+                duration: appointmentType?.duration,
+                price: appointmentType?.price,
+              }),
+            });
 
-      //reset form
-      setSelectedDate(""),
-      setSelectedDentistId(null),
-      setSelectedTime(""),
-      setSelectedType(""),
-      setCurrentStep(1)
-    },
-    onError:(error)=>toast.error(`Failed to Book Appointment ${error.message}`)
-  })
+            if (!emailResponse.ok) console.error("Failed to send confirmation email");
+          } catch (error) {
+            console.error("Error sending confirmation email:", error);
+          }
+
+          // show the success modal
+          setShowConfirmationModal(true);
+
+          // reset form
+          setSelectedDentistId(null);
+          setSelectedDate("");
+          setSelectedTime("");
+          setSelectedType("");
+          setCurrentStep(1);
+        },
+        onError: (error) => toast.error(`Failed to book appointment: ${error.message}`),
+      }
+    );
   };
-
   
   return (
     <>
@@ -121,6 +145,23 @@ onTypeChange={setSelectedType}
           />
         )}
       </div>
+{/* POPUP MOdel afterconfirmation */}
+   {bookedAppointment && (
+        <AppointmentConfirmationModal
+          open={showConfirmationModal}
+          onOpenChange={setShowConfirmationModal}
+          appointmentDetails={{
+            doctorName: bookedAppointment.doctorName,
+            appointmentDate: format(new Date(bookedAppointment.date), "EEEE, MMMM d, yyyy"),
+            appointmentTime: bookedAppointment.time,
+            userEmail: bookedAppointment.patientEmail,
+          }}
+        />
+      )}
+
+
+
+
  {/* SHOW EXISTING APPOINTMENTS FOR THE CURRENT USER */}
       {userAppointments.length > 0 && (
         <div className="mb-8 max-w-7xl mx-auto px-6 py-8">
